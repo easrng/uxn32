@@ -2141,7 +2141,7 @@ static LRESULT CALLBACK EmuWndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lp
 	}
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
-
+#include <io.h>
 int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int show_code)
 {
 	WNDCLASSEX wc; HWND hWin, hParent;
@@ -2170,8 +2170,32 @@ int CALLBACK WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_
 	RegisterClassEx(&wc);
 	hAccel = LoadAccelerators(instance, (LPCSTR)IDC_UXN32);
 	InitCommonControls();
-
-	hWin = CreateUxnWindow(instance, TEXT("launcher.rom"));
+	char* path;
+	// unquote path
+	if (command_line[0] == 34) {
+		command_line++;
+		command_line[strlen(command_line) - 1] = 0;
+	}
+	//MessageBoxA(NULL, command_line, command_line, MB_OK);
+	if (strlen(command_line) != 0 && _access(command_line, 0) == 0) {
+		path = command_line;
+	} else {
+		TCHAR szFileName[MAX_PATH + 13];
+		GetModuleFileNameA(NULL, szFileName, MAX_PATH);
+		size_t len = strlen(szFileName);
+		size_t i;
+		char c;
+		for (i = len; i > 0; i--) {
+			c = szFileName[i];
+			if (c == 92) {
+				// once we find the first \ from the end, we rewrite the string to point to the launcher ROM instead of Uxn32.exe
+				szFileName[i + 1] = 108; szFileName[i + 2] = 97; szFileName[i + 3] = 117; szFileName[i + 4] = 110; szFileName[i + 5] = 99; szFileName[i + 6] = 104; szFileName[i + 7] = 101; szFileName[i + 8] = 114; szFileName[i + 9] = 46; szFileName[i + 10] = 114; szFileName[i + 11] = 111; szFileName[i + 12] = 109; szFileName[i + 13] = 0;
+				break;
+			}
+		}
+		path = szFileName;
+	}
+	hWin = CreateUxnWindow(instance, TEXT(path));
 	ShowWindow(hWin, show_code);
 
 	for (;;)
